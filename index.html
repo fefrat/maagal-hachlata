@@ -1,0 +1,682 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>מעגל החלטה</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Suez+One&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap">
+<style>
+/* Layout: a town-square board — topics list on the side, the open question and its voices in the main column */
+:root{
+  --bg:#F1F2EC; --surface:#FFFFFF; --sunk:#E8EAE2; --ink:#1D2520; --muted:#5D6962; --line:#D6DACF;
+  --accent:#2C5C4C; --accent-ink:#FFFFFF; --accent-soft:#DFEAE3;
+  --pro:#2E7647; --pro-soft:#E0EFE4; --con:#AD432D; --con-soft:#F6E3DD; --mid:#9A6D10; --mid-soft:#F5ECD6;
+  --q:#365786; --q-soft:#E1E8F3;
+  --display:"Suez One","Frank Ruhl Libre",Georgia,serif;
+  --body:"IBM Plex Sans Hebrew","Assistant","Segoe UI",Arial,sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131815; --surface:#1B221E; --sunk:#171D1A; --ink:#E5EBE7; --muted:#9BA7A0; --line:#2C3530;
+  --accent:#86C7AB; --accent-ink:#0D1411; --accent-soft:#1E3029;
+  --pro:#72C48F; --pro-soft:#1C3024; --con:#EC8E77; --con-soft:#3A221C; --mid:#E2B85E; --mid-soft:#352A14;
+  --q:#93B3E6; --q-soft:#1D2738; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131815; --surface:#1B221E; --sunk:#171D1A; --ink:#E5EBE7; --muted:#9BA7A0; --line:#2C3530;
+  --accent:#86C7AB; --accent-ink:#0D1411; --accent-soft:#1E3029;
+  --pro:#72C48F; --pro-soft:#1C3024; --con:#EC8E77; --con-soft:#3A221C; --mid:#E2B85E; --mid-soft:#352A14;
+  --q:#93B3E6; --q-soft:#1D2738; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6}
+*{box-sizing:border-box}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:12px}
+.ring{width:40px;height:40px;flex:none}
+.brand h1{font-family:var(--display);font-weight:400;font-size:28px;line-height:1.1;margin:0}
+.brand p{margin:0;color:var(--muted);font-size:14px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;font-weight:500;font-size:15px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:5px 12px;font-size:14px}
+
+.grid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+aside .label,.label{font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:600;margin:0 0 10px}
+.tlist{display:flex;flex-direction:column;gap:6px;list-style:none;margin:0;padding:0}
+.tlist button{width:100%;text-align:start;background:transparent;border:1px solid transparent;border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.tlist button:hover{background:var(--surface);border-color:var(--line)}
+.tlist button[aria-current="true"]{background:var(--surface);border-color:var(--accent)}
+.tlist .tt{font-weight:600;line-height:1.35;text-wrap:balance}
+.tlist .tm{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+.dot.done{background:var(--muted)}
+@media (max-width:860px){aside{border-bottom:1px solid var(--line);padding-bottom:16px}.tlist{flex-direction:row;overflow-x:auto;padding-bottom:4px}.tlist li{flex:0 0 240px}}
+
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:40px 28px;text-align:center}
+.empty h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0 0 8px;text-wrap:balance}
+.empty p{color:var(--muted);max-width:46ch;margin:0 auto 20px}
+.steps{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:0 0 24px;padding:0;list-style:none}
+.steps li{background:var(--sunk);border-radius:var(--r);padding:10px 14px;font-size:14px;max-width:220px;text-align:start}
+.steps b{display:block;color:var(--accent)}
+
+.topic{display:flex;flex-direction:column;gap:14px;margin-bottom:22px}
+.status{align-self:flex-start;font-size:13px;font-weight:600;border-radius:999px;padding:3px 12px;background:var(--accent-soft);color:var(--accent)}
+.status.done{background:var(--sunk);color:var(--muted)}
+.topic h2{font-family:var(--display);font-weight:400;font-size:clamp(26px,4vw,38px);line-height:1.2;margin:0;text-wrap:balance}
+.topic .details{margin:0;max-width:65ch;white-space:pre-wrap;color:var(--ink)}
+.meta{font-size:14px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.av{width:22px;height:22px;border-radius:50%;object-fit:cover;flex:none;vertical-align:middle}
+
+.pulse{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.pulse-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.pulse-head strong{color:var(--ink);font-weight:600}
+.bar{display:flex;height:12px;border-radius:999px;overflow:hidden;background:var(--sunk)}
+.bar span{display:block;height:100%;transition:width .4s}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;font-variant-numeric:tabular-nums}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:middle}
+
+.decision{border-radius:14px;padding:16px 18px;background:var(--accent-soft);border:1px solid var(--accent)}
+.decision h3{margin:0 0 6px;font-family:var(--display);font-weight:400;font-size:20px;color:var(--accent)}
+.decision p{margin:0 0 8px;white-space:pre-wrap}
+.toolrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.seg{display:inline-flex;background:var(--sunk);border-radius:999px;padding:3px;gap:2px;align-self:flex-start}
+.seg button{border:0;background:transparent;border-radius:999px;padding:6px 16px;font-weight:500;font-size:15px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-size:14px}
+.chip[data-s="pro"][aria-pressed="true"]{background:var(--pro-soft);border-color:var(--pro);color:var(--pro)}
+.chip[data-s="con"][aria-pressed="true"]{background:var(--con-soft);border-color:var(--con);color:var(--con)}
+.chip[data-s="mid"][aria-pressed="true"]{background:var(--mid-soft);border-color:var(--mid);color:var(--mid)}
+textarea,input[type=text]{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:var(--r);padding:10px 12px;resize:vertical}
+textarea:focus,input[type=text]:focus{outline:none;border-color:var(--accent)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.err{font-size:14px;color:var(--con);margin:0}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 12px;align-items:center}
+.filters .count{color:var(--muted);font-size:14px;margin-inline-start:auto}
+
+.posts{display:flex;flex-direction:column;gap:12px;list-style:none;margin:0;padding:0}
+.post{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.post.question{border-inline-start:4px solid var(--q)}
+.phead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.phead .who{color:var(--ink);font-weight:600}
+.tag{font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px}
+.tag.pro{background:var(--pro-soft);color:var(--pro)}
+.tag.con{background:var(--con-soft);color:var(--con)}
+.tag.mid{background:var(--mid-soft);color:var(--mid)}
+.tag.q{background:var(--q-soft);color:var(--q)}
+.ptext{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.pfoot{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.link{background:none;border:0;padding:0;color:var(--accent);font-weight:500;font-size:14px}
+.link.danger{color:var(--con)}
+.replies{list-style:none;margin:4px 0 0;padding:0 14px 0 0;border-inline-start:2px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.replies li{display:flex;flex-direction:column;gap:2px}
+.replybox{display:flex;gap:8px;align-items:flex-end}
+.replybox textarea{min-height:44px}
+
+.score{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.pips{display:inline-flex;gap:4px}
+.pip{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;padding:0}
+.pip:hover{border-color:var(--accent);color:var(--accent)}
+.pip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.total{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.anon{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer}
+.anon input{width:16px;height:16px;accent-color:var(--accent)}
+.anon-name{font-style:italic}
+
+.cloud{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.cloud-words{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 18px;padding:14px 4px;min-height:120px;background:radial-gradient(ellipse at center,var(--accent-soft),transparent 70%);border-radius:var(--r)}
+.word{background:none;border:0;padding:2px 4px;line-height:1.15;font-family:var(--display);text-align:center;max-width:100%;overflow-wrap:anywhere;border-radius:6px;transition:transform .15s}
+.word:hover{transform:scale(1.05)}
+.word sup{font-family:var(--body);font-size:11px;font-weight:600;color:var(--muted);margin-inline-start:3px}
+.word.pro{color:var(--pro)}.word.con{color:var(--con)}.word.mid{color:var(--mid)}.word.none{color:var(--ink)}
+.word.cold{opacity:.45}
+.post.flash{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+.stats{display:flex;flex-wrap:wrap;align-items:stretch;gap:12px 28px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding-block:14px;padding-inline:20px;margin-bottom:24px}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .n{font-family:var(--display);font-size:30px;line-height:1.05;font-variant-numeric:tabular-nums}
+.stat .l{font-size:13px;color:var(--muted)}
+.stats .sep{width:1px;background:var(--line);align-self:stretch}
+.breakdown{display:flex;flex-direction:column;gap:6px;justify-content:center;min-width:0;flex:1 1 280px}
+.breakdown .l{font-size:13px;color:var(--muted)}
+.bd{display:flex;flex-wrap:wrap;gap:6px}
+.bd span{font-size:14px;font-weight:500;border-radius:999px;padding:3px 12px;font-variant-numeric:tabular-nums;background:var(--sunk);color:var(--ink)}
+.bd .pro{background:var(--pro-soft);color:var(--pro)}.bd .con{background:var(--con-soft);color:var(--con)}.bd .mid{background:var(--mid-soft);color:var(--mid)}.bd .q{background:var(--q-soft);color:var(--q)}
+@media (max-width:560px){.stats .sep{display:none}}
+.overlay{position:fixed;inset:0;background:rgba(10,15,12,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.dialog{background:var(--surface);border-radius:16px;max-width:560px;width:100%;padding:22px;display:flex;flex-direction:column;gap:12px;max-height:90vh;overflow:auto}
+.dialog h2{font-family:var(--display);font-weight:400;font-size:24px;margin:0}
+.notice{background:var(--mid-soft);color:var(--ink);border-radius:var(--r);padding:10px 14px;font-size:14px;margin:0 0 16px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+  <header class="top">
+    <div class="brand">
+      <svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="14" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 4.33"/>
+        <circle cx="20" cy="6" r="3.2" fill="var(--pro)"/><circle cx="32" cy="27" r="3.2" fill="var(--mid)"/><circle cx="8" cy="27" r="3.2" fill="var(--con)"/>
+        <circle cx="20" cy="20" r="4.5" fill="var(--accent)"/>
+      </svg>
+      <div>
+        <h1>מעגל החלטה</h1>
+        <p>מעלים שאלה, שומעים את כולם, מחליטים יחד</p>
+      </div>
+    </div>
+    <button class="btn primary" id="newTopicBtn" type="button">+ שאלה מרכזית חדשה</button>
+  </header>
+
+  <section class="stats" id="stats" aria-live="polite"></section>
+  <p class="notice" id="notice" hidden></p>
+
+  <div class="grid">
+    <aside>
+      <p class="label">שאלות על השולחן</p>
+      <ul class="tlist" id="topicList"></ul>
+      <p class="hint" id="noTopicsHint">עדיין אין שאלות.</p>
+    </aside>
+
+    <main>
+      <section id="emptyState" class="empty">
+        <h2>עוד לא נפתח דיון</h2>
+        <p>כאן הקהילה מתייעצת ומחליטה. פותחים שאלה מרכזית, וכל אחד יכול לחוות דעה או לשאול שאלה לגביה.</p>
+        <ol class="steps">
+          <li><b>פתיחה</b>מעלים שאלה מרכזית עם רקע קצר</li>
+          <li><b>התייעצות</b>כל אחד מוסיף דעה (בעד, נגד, מתלבט) או שאלה</li>
+          <li><b>החלטה</b>מסכמים את מה שהוחלט ונועלים את הדיון</li>
+        </ol>
+        <button class="btn primary" type="button" id="emptyNewBtn">פתחו את השאלה הראשונה</button>
+      </section>
+
+      <div id="topicArea" hidden>
+        <section class="topic" id="topicView"></section>
+
+        <section class="panel" id="composer">
+          <div class="seg" role="group" aria-label="סוג התגובה">
+            <button type="button" id="kindOpinion" aria-pressed="true">דעה</button>
+            <button type="button" id="kindQuestion" aria-pressed="false">שאלה</button>
+          </div>
+          <div class="chips" id="stanceChips" role="group" aria-label="עמדה">
+            <button type="button" class="chip" data-s="pro" aria-pressed="false">בעד</button>
+            <button type="button" class="chip" data-s="mid" aria-pressed="false">מתלבט/ת</button>
+            <button type="button" class="chip" data-s="con" aria-pressed="false">נגד</button>
+          </div>
+          <label class="label" for="postText" id="postLabel" style="margin:0">מה דעתך?</label>
+          <textarea id="postText" rows="3" placeholder="כתבו את דעתכם ולמה"></textarea>
+          <div class="toolrow">
+            <button class="btn primary" type="button" id="sendBtn">פרסום</button>
+            <label class="anon"><input type="checkbox" id="anonPost"> להציג את שמי</label>
+          </div>
+          <div class="toolrow">
+            <p class="hint" id="composerHint">העמדה שלך נספרת בדופק הקהילה. אפשר לשנות אותה בדעה חדשה.</p>
+          </div>
+          <p class="err" id="composerErr" hidden></p>
+        </section>
+        <p class="hint" id="lockedHint" hidden>הדיון ננעל אחרי שהתקבלה החלטה. אפשר עדיין לקרוא את כל מה שנאמר.</p>
+
+        <div class="filters" role="group" aria-label="סינון">
+          <button type="button" class="chip" data-f="all" aria-pressed="true">הכל</button>
+          <button type="button" class="chip" data-f="opinion" aria-pressed="false">דעות</button>
+          <button type="button" class="chip" data-f="question" aria-pressed="false">שאלות</button>
+          <span class="hint" aria-hidden="true">|</span>
+          <button type="button" class="chip" data-o="new" aria-pressed="true">חדש קודם</button>
+          <button type="button" class="chip" data-o="score" aria-pressed="false">לפי ניקוד</button>
+          <span class="count" id="postCount"></span>
+        </div>
+        <ul class="posts" id="posts"></ul>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="overlay" id="newTopicOverlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="ntTitle" dir="rtl" lang="he">
+    <h2 id="ntTitle">שאלה מרכזית חדשה</h2>
+    <label class="label" for="ntQuestion" style="margin:0">השאלה</label>
+    <input type="text" id="ntQuestion" maxlength="200" placeholder="למשל: האם להקים גינה קהילתית במגרש הפנוי?">
+    <label class="label" for="ntDetails" style="margin:0">רקע (לא חובה)</label>
+    <textarea id="ntDetails" rows="5" placeholder="מה חשוב לדעת? מה האפשרויות? עד מתי מחליטים?"></textarea>
+    <label class="anon"><input type="checkbox" id="anonTopic"> להציג את שמי (בלי סימון השאלה תיפתח בעילום שם)</label>
+    <p class="err" id="ntErr" hidden></p>
+    <div class="toolrow">
+      <button class="btn primary" type="button" id="ntCreate">פתיחת הדיון</button>
+      <button class="btn ghost" type="button" id="ntCancel">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const S = { db:null, user:null, me:null, canWrite:null, canEdit:false, ready:false,
+    topics:[], posts:[], profiles:{}, selected:null, filter:'all', kind:'opinion', stance:null,
+    openReply:null, replyDrafts:{}, deciding:false, decisionDraft:'', confirmDelete:null,
+    showName:false, anonKey:null, votes:{}, visits:{}, order:'new' };
+  const $ = id => document.getElementById(id);
+  const STANCE = { pro:'בעד', mid:'מתלבט/ת', con:'נגד' };
+
+  function h(tag, attrs, ...kids){
+    const el = document.createElement(tag);
+    if (attrs) for (const [k,v] of Object.entries(attrs)){
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const k of kids.flat()){ if (k == null || k === false) continue; el.append(k.nodeType ? k : document.createTextNode(String(k))); }
+    return el;
+  }
+  const rtf = new Intl.RelativeTimeFormat('he', { numeric:'auto' });
+  function rel(ts){
+    const d = (ts - Date.now())/1000, a = Math.abs(d);
+    if (a < 60) return 'עכשיו';
+    if (a < 3600) return rtf.format(Math.round(d/60), 'minute');
+    if (a < 86400) return rtf.format(Math.round(d/3600), 'hour');
+    if (a < 86400*30) return rtf.format(Math.round(d/86400), 'day');
+    return new Date(ts).toLocaleDateString('he-IL');
+  }
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+                  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} } };
+  function who(id){ const p = S.profiles[id]; return { name:(p && p.name) || (id && id === S.me ? 'את/ה' : 'חבר/ת קהילה'), av:p && p.avatarUrl }; }
+  function person(id){
+    const w = who(id);
+    return [ w.av ? h('img', { class:'av', src:w.av, alt:'' }) : null, h('span', { class:'who' }, w.name) ];
+  }
+  function byline(rec){ return rec && rec.anon ? [h('span', { class:'who anon-name' }, 'בעילום שם')] : person(rec && rec.author); }
+  const mine = rec => !!rec && ((S.me && rec.author === S.me) || (S.anonKey && rec.anonKey === S.anonKey));
+  function scoreOf(pid){ let sum = 0, n = 0; for (const sc of Object.values(S.votes)){ const v = sc && sc[pid]; if (typeof v === 'number' && v > 0){ sum += v; n++; } } return { sum, n }; }
+  function notice(msg){ const n = $('notice'); n.textContent = msg || ''; n.hidden = !msg; }
+
+  // ---------- derived ----------
+  const topic = () => S.topics.find(t => t.id === S.selected) || null;
+  const postsFor = tid => S.posts.filter(p => p.topicId === tid);
+  function pulse(tid){
+    const latest = {};
+    for (const p of postsFor(tid)) if (!p.parentId && p.kind === 'opinion' && p.stance && (p.author || p.anonKey)){
+      const k = p.author || p.anonKey;
+      if (!latest[k] || latest[k].createdAt < p.createdAt) latest[k] = p;
+    }
+    const c = { pro:0, mid:0, con:0 };
+    Object.values(latest).forEach(p => { if (c[p.stance] != null) c[p.stance]++; });
+    return c;
+  }
+  const canDecide = t => !!t && (S.canEdit || mine(t));
+  const writable = () => S.db && S.canWrite !== false && !!S.me;
+
+  // ---------- render ----------
+  let seq = 0;
+  async function render(){
+    const my = ++seq;
+    const ids = new Set();
+    S.topics.forEach(t => t.author && ids.add(t.author));
+    S.posts.forEach(p => p.author && ids.add(p.author));
+    if (S.user && ids.size){ try { S.profiles = await S.user.profiles([...ids]); } catch(e){} }
+    if (my !== seq) return;
+    draw();
+  }
+
+  function drawStats(t){
+    const el = $('stats'); el.replaceChildren();
+    const visitors = Object.values(S.visits);
+    const stat = (n, l) => h('div', { class:'stat' }, h('span', { class:'n' }, n), h('span', { class:'l' }, l));
+    if (!t){
+      el.append(stat(visitors.length, 'נכנסו לאתר'), stat(S.topics.length, 'שאלות נפתחו'));
+      el.hidden = !S.ready; return;
+    }
+    el.hidden = false;
+    const entered = visitors.filter(v => v && v.seen && v.seen[t.id]).length;
+    const all = postsFor(t.id), key = p => p.author || p.anonKey;
+    const people = new Set(), qs = new Set(), reps = new Set(), voters = new Set();
+    all.forEach(p => { const k = key(p); if (!k) return; people.add(k); if (!p.parentId && p.kind === 'question') qs.add(k); if (p.parentId) reps.add(k); });
+    const opIds = new Set(all.filter(p => !p.parentId && p.kind === 'opinion').map(p => p.id));
+    for (const [uid, sc] of Object.entries(S.votes)) if (sc && Object.keys(sc).some(pid => opIds.has(pid) && sc[pid] > 0)){ voters.add(uid); people.add(uid); }
+    const c = pulse(t.id);
+    el.append(stat(entered, 'נכנסו לשאלה'), h('span', { class:'sep', 'aria-hidden':'true' }), stat(people.size, 'השתתפו'),
+      h('div', { class:'breakdown' }, h('span', { class:'l' }, 'פירוט המשתתפים'),
+        h('div', { class:'bd' },
+          h('span', { class:'pro' }, `בעד ${c.pro}`), h('span', { class:'mid' }, `מתלבטים ${c.mid}`), h('span', { class:'con' }, `נגד ${c.con}`),
+          h('span', { class:'q' }, `שאלו ${qs.size}`), h('span', null, `הגיבו ${reps.size}`), h('span', null, `ניקדו ${voters.size}`))));
+  }
+
+  let visitQ = Promise.resolve();
+  function markSeen(tid){
+    if (!S.visitReady || !tid) return;
+    const mine = S.visits[S.me] || { seen:{} };
+    if (mine.seen && mine.seen[tid]) return;
+    S.visits = { ...S.visits, [S.me]: { ...mine, seen: { ...(mine.seen || {}), [tid]: true } } };
+    visitQ = visitQ.then(() => S.db.doc('visits/' + S.me).update({ at: Date.now(), seen: { [tid]: true } })).catch(() => {});
+  }
+
+  function draw(){
+    drawStats(topic());
+    markSeen(S.selected);
+    // topic list
+    const list = $('topicList'); list.replaceChildren();
+    S.topics.forEach(t => {
+      const n = postsFor(t.id).filter(p => !p.parentId).length;
+      list.append(h('li', null, h('button', { type:'button', 'aria-current': t.id === S.selected ? 'true' : 'false', onclick:() => select(t.id) },
+        h('span', { class:'tt' }, t.title),
+        h('span', { class:'tm' }, h('span', { class: 'dot' + (t.status === 'decided' ? ' done' : '') }), t.status === 'decided' ? 'הוחלט' : 'פתוח לדיון', '·', n + ' תגובות')
+      )));
+    });
+    $('noTopicsHint').hidden = S.topics.length > 0 || !S.ready;
+
+    const t = topic();
+    $('emptyState').hidden = !!t;
+    $('topicArea').hidden = !t;
+    $('newTopicBtn').disabled = !writable();
+    $('emptyNewBtn').disabled = !writable();
+    if (!t) return;
+
+    // topic header
+    const tv = $('topicView'); tv.replaceChildren();
+    const decided = t.status === 'decided';
+    tv.append(h('span', { class:'status' + (decided ? ' done' : '') }, decided ? 'התקבלה החלטה' : 'פתוח לדיון'));
+    tv.append(h('h2', null, t.title));
+    tv.append(h('div', { class:'meta' }, 'נפתח על ידי', ...byline(t), '·', rel(t.createdAt)));
+    if (t.details) tv.append(h('p', { class:'details' }, t.details));
+
+    const c = pulse(t.id), total = c.pro + c.mid + c.con;
+    const pct = k => total ? (c[k] / total * 100) : 0;
+    tv.append(h('div', { class:'pulse' },
+      h('div', { class:'pulse-head' }, h('span', null, h('strong', null, 'דופק הקהילה'), ' · העמדה האחרונה של כל משתתף'), h('span', null, total ? total + ' משתתפים הביעו עמדה' : 'עוד אין עמדות')),
+      h('div', { class:'bar', role:'img', 'aria-label': `בעד ${c.pro}, מתלבטים ${c.mid}, נגד ${c.con}` },
+        h('span', { style:`width:${pct('pro')}%;background:var(--pro)` }),
+        h('span', { style:`width:${pct('mid')}%;background:var(--mid)` }),
+        h('span', { style:`width:${pct('con')}%;background:var(--con)` })),
+      h('div', { class:'legend' },
+        h('span', null, h('i', { style:'background:var(--pro)' }), `בעד ${c.pro}`),
+        h('span', null, h('i', { style:'background:var(--mid)' }), `מתלבטים ${c.mid}`),
+        h('span', null, h('i', { style:'background:var(--con)' }), `נגד ${c.con}`))
+    ));
+
+    const ops = postsFor(t.id).filter(p => !p.parentId && p.kind === 'opinion').map(p => ({ p, ...scoreOf(p.id) }));
+    const words = h('div', { class:'cloud-words' });
+    if (!ops.length) words.append(h('p', { class:'hint' }, 'הענן ייבנה כשיתחילו להופיע דעות ולקבל ניקוד.'));
+    else {
+      const max = Math.max(1, ...ops.map(o => o.sum));
+      const sorted = ops.sort((a,b) => b.sum - a.sum || b.p.createdAt - a.p.createdAt).slice(0, 40);
+      const arranged = []; sorted.forEach((o,i) => i % 2 ? arranged.push(o) : arranged.unshift(o));
+      arranged.forEach(o => {
+        const txt = o.p.text.length > 60 ? o.p.text.slice(0, 58).trim() + '…' : o.p.text;
+        const size = 15 + Math.round((o.sum / max) * 28);
+        words.append(h('button', { type:'button', class:'word ' + (o.p.stance || 'none') + (o.sum ? '' : ' cold'), style:`font-size:${size}px`,
+          title: o.sum + ' נקודות מ-' + o.n + ' מדרגים', onclick:() => jumpTo(o.p.id) }, txt, h('sup', null, o.sum)));
+      });
+    }
+    tv.append(h('div', { class:'cloud' },
+      h('div', { class:'pulse-head' }, h('span', null, h('strong', null, 'ענן הדעות'), ' · גודל = סך הניקוד שהקהילה נתנה'), h('span', null, 'צבע לפי עמדה · לחיצה מובילה לדעה')),
+      words));
+
+    if (decided){
+      const box = h('div', { class:'decision' }, h('h3', null, 'ההחלטה'), h('p', null, t.decision || ''),
+        h('div', { class:'meta' }, 'סוכם על ידי', ...person(t.decidedBy), '·', rel(t.decidedAt || t.createdAt)));
+      if (canDecide(t) && writable()) box.append(h('div', { class:'toolrow', style:'margin-top:8px' }, h('button', { class:'btn sm', type:'button', onclick:reopen }, 'פתיחת הדיון מחדש')));
+      tv.append(box);
+    } else if (canDecide(t) && writable()){
+      if (S.deciding){
+        const ta = h('textarea', { id:'decisionText', rows:'3', placeholder:'מה הוחלט, ומה הצעדים הבאים?' });
+        ta.value = S.decisionDraft; ta.addEventListener('input', e => S.decisionDraft = e.target.value);
+        tv.append(h('div', { class:'panel' }, h('label', { class:'label', for:'decisionText', style:'margin:0' }, 'סיכום והחלטה'), ta,
+          h('div', { class:'toolrow' }, h('button', { class:'btn primary', type:'button', onclick:decide }, 'פרסום ההחלטה ונעילת הדיון'),
+            h('button', { class:'btn ghost', type:'button', onclick:() => { S.deciding = false; draw(); } }, 'ביטול'))));
+      } else {
+        const row = h('div', { class:'toolrow' }, h('button', { class:'btn', type:'button', onclick:() => { S.deciding = true; draw(); $('decisionText')?.focus(); } }, 'סיכום והחלטה'));
+        if (S.confirmDelete === t.id){
+          row.append(h('span', { class:'hint' }, 'למחוק את השאלה וכל התגובות?'),
+            h('button', { class:'link danger', type:'button', onclick:() => deleteTopic(t) }, 'כן, למחוק'),
+            h('button', { class:'link', type:'button', onclick:() => { S.confirmDelete = null; draw(); } }, 'ביטול'));
+        } else row.append(h('button', { class:'link danger', type:'button', onclick:() => { S.confirmDelete = t.id; draw(); } }, 'מחיקת השאלה'));
+        tv.append(row);
+      }
+    }
+
+    // composer
+    $('composer').hidden = decided || !writable();
+    $('lockedHint').hidden = !decided;
+    const isOp = S.kind === 'opinion';
+    $('kindOpinion').setAttribute('aria-pressed', isOp); $('kindQuestion').setAttribute('aria-pressed', !isOp);
+    $('stanceChips').hidden = !isOp;
+    $('anonPost').checked = S.showName || !S.anonKey; $('anonPost').disabled = !S.anonKey;
+    $('stanceChips').querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.s === S.stance));
+    $('postLabel').textContent = isOp ? 'מה דעתך?' : 'מה תרצו לשאול?';
+    $('postText').placeholder = isOp ? 'כתבו את דעתכם ולמה' : 'שאלה לגבי השאלה המרכזית: מידע חסר, עלויות, לוחות זמנים…';
+    $('composerHint').textContent = isOp ? 'העמדה שלך נספרת בדופק הקהילה. אפשר לשנות אותה בדעה חדשה.' : 'כל אחד יכול לענות על השאלה שלך.';
+
+    // posts
+    document.querySelectorAll('.filters .chip[data-f]').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === S.filter));
+    document.querySelectorAll('.filters .chip[data-o]').forEach(b => b.setAttribute('aria-pressed', b.dataset.o === S.order));
+    const all = postsFor(t.id);
+    const top = all.filter(p => !p.parentId && (S.filter === 'all' || p.kind === S.filter)).sort((a,b) => (S.order === 'score' ? scoreOf(b.id).sum - scoreOf(a.id).sum : 0) || b.createdAt - a.createdAt);
+    const nOp = all.filter(p => !p.parentId && p.kind === 'opinion').length, nQ = all.filter(p => !p.parentId && p.kind === 'question').length;
+    $('postCount').textContent = `${nOp} דעות · ${nQ} שאלות`;
+
+    const active = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.reply : null;
+    const ul = $('posts'); ul.replaceChildren();
+    if (!top.length) ul.append(h('li', { class:'hint', style:'padding:8px 0' }, decided ? 'לא נכתבו תגובות.' : 'עוד אין תגובות כאן. הדעה או השאלה הראשונה יכולה להיות שלך.'));
+    top.forEach(p => {
+      const isQ = p.kind === 'question';
+      const li = h('li', { class:'post' + (isQ ? ' question' : ''), id:'post-' + p.id });
+      li.append(h('div', { class:'phead' }, ...byline(p),
+        isQ ? h('span', { class:'tag q' }, 'שאלה') : (p.stance ? h('span', { class:'tag ' + p.stance }, STANCE[p.stance]) : h('span', { class:'tag mid', style:'background:var(--sunk);color:var(--muted)' }, 'דעה')),
+        h('span', null, '·'), h('span', null, rel(p.createdAt))));
+      li.append(h('p', { class:'ptext' }, p.text));
+
+      if (!isQ){
+        const sc = scoreOf(p.id), myS = (S.votes[S.me] || {})[p.id];
+        const row = h('div', { class:'score' }, h('span', { class:'total' }, sc.sum + ' נק׳'), h('span', null, sc.n ? sc.n + ' מדרגים' : 'עוד לא נוקדה'));
+        if (writable() && !decided && !mine(p)){
+          row.prepend(h('span', null, 'הניקוד שלך:'), h('span', { class:'pips', role:'group', 'aria-label':'ניקוד מ-1 עד 5' },
+            [1,2,3,4,5].map(n => h('button', { type:'button', class:'pip' + (myS === n ? ' on' : ''), 'aria-pressed': String(myS === n), 'aria-label': n + ' נקודות', onclick:() => vote(p, n) }, n))));
+        } else if (mine(p)) row.append(h('span', null, '· אי אפשר לנקד דעה שלך'));
+        li.append(row);
+      }
+
+      const replies = all.filter(r => r.parentId === p.id).sort((a,b) => a.createdAt - b.createdAt);
+      if (replies.length){
+        li.append(h('ul', { class:'replies' }, replies.map(r => h('li', null,
+          h('div', { class:'phead' }, ...byline(r), h('span', null, '·'), h('span', null, rel(r.createdAt)),
+            mine(r) && !decided ? h('button', { class:'link danger', type:'button', onclick:() => removePost(r) }, 'מחיקה') : null),
+          h('p', { class:'ptext' }, r.text)))));
+      }
+
+      const foot = h('div', { class:'pfoot' });
+      if (!decided && writable()) foot.append(h('button', { class:'link', type:'button', onclick:() => { S.openReply = S.openReply === p.id ? null : p.id; draw(); document.querySelector(`[data-reply="${p.id}"]`)?.focus(); } }, isQ ? 'תשובה' : 'תגובה'));
+      if (mine(p) && !decided) foot.append(h('button', { class:'link danger', type:'button', onclick:() => removePost(p) }, 'מחיקה'));
+      if (foot.childNodes.length) li.append(foot);
+
+      if (S.openReply === p.id && !decided && writable()){
+        const ta = h('textarea', { id:'reply-' + p.id, 'data-reply':p.id, rows:'2', placeholder: isQ ? 'כתבו תשובה' : 'כתבו תגובה', 'aria-label':'תגובה' });
+        ta.value = S.replyDrafts[p.id] || '';
+        ta.addEventListener('input', e => S.replyDrafts[p.id] = e.target.value);
+        li.append(h('div', { class:'replybox' }, ta, h('button', { class:'btn primary sm', type:'button', onclick:() => sendReply(p) }, 'שליחה')));
+        li.append(h('p', { class:'hint' }, (S.showName || !S.anonKey) ? 'התגובה תפורסם בשמך' : 'התגובה תפורסם בעילום שם'));
+      }
+      ul.append(li);
+    });
+    if (active){ const el = document.querySelector(`[data-reply="${active}"]`); if (el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
+  }
+
+  function jumpTo(pid){
+    if (S.filter === 'question'){ S.filter = 'all'; draw(); }
+    const el = document.getElementById('post-' + pid); if (!el) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block:'center' });
+    el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600);
+  }
+  const who4 = showName => !showName && S.anonKey ? { author:null, anon:true, anonKey:S.anonKey } : { author:S.me, anon:false, anonKey:null };
+
+  let vq = Promise.resolve();
+  function vote(p, n){
+    if (!S.me) return;
+    const mineV = { ...(S.votes[S.me] || {}) };
+    if (mineV[p.id] === n) delete mineV[p.id]; else mineV[p.id] = n;
+    S.votes = { ...S.votes, [S.me]: mineV }; draw();
+    vq = vq.then(() => S.db.doc('votes/' + S.me).set({ scores: mineV })).catch(e => handleWriteErr(e));
+  }
+
+  function select(id){ S.selected = id; S.deciding = false; S.confirmDelete = null; S.openReply = null; store.set('maagal.sel', id); draw(); }
+
+  // ---------- writes ----------
+  function handleWriteErr(e, errEl){
+    if (e && e.code === 'invalid_argument' && S.canWrite == null){ S.canWrite = false; notice('אפשר לקרוא את הדיון, אבל אין לך הרשאה לכתוב בו. בקשו מבעל הדף הרשאת משתתף.'); draw(); return; }
+    const msg = e && e.code === 'quota_exceeded' ? 'המאגר מלא. מחקו דיונים ישנים כדי לפנות מקום.' : 'השמירה לא הצליחה. בדקו את החיבור ונסו שוב.';
+    if (errEl){ errEl.textContent = msg; errEl.hidden = false; } else notice(msg);
+  }
+
+  async function createTopic(){
+    const q = $('ntQuestion').value.trim(), d = $('ntDetails').value.trim(), err = $('ntErr');
+    err.hidden = true;
+    if (!q){ err.textContent = 'כתבו את השאלה המרכזית.'; err.hidden = false; return; }
+    const id = 't' + newId();
+    $('ntCreate').disabled = true;
+    try {
+      await S.db.doc('topics/' + id).set({ title:q, details:d, ...who4($('anonTopic').checked), createdAt:Date.now(), status:'open' });
+      $('ntQuestion').value = ''; $('ntDetails').value = '';
+      closeNew(); select(id);
+    } catch(e){ handleWriteErr(e, err); }
+    finally { $('ntCreate').disabled = false; }
+  }
+
+  async function sendPost(){
+    const t = topic(), text = $('postText').value.trim(), err = $('composerErr');
+    err.hidden = true;
+    if (!t || !text){ err.textContent = 'כתבו משהו לפני הפרסום.'; err.hidden = false; return; }
+    const isOp = S.kind === 'opinion';
+    $('sendBtn').disabled = true;
+    try {
+      await S.db.doc('posts/p' + newId()).set({ topicId:t.id, kind:S.kind, stance: isOp ? S.stance : null, text, ...who4(S.showName), createdAt:Date.now(), parentId:null });
+      $('postText').value = ''; store.set('maagal.draft', ''); S.stance = null; draw();
+    } catch(e){ handleWriteErr(e, err); }
+    finally { $('sendBtn').disabled = false; }
+  }
+
+  async function sendReply(p){
+    const text = (S.replyDrafts[p.id] || '').trim();
+    if (!text) return;
+    try {
+      await S.db.doc('posts/p' + newId()).set({ topicId:p.topicId, kind:'reply', stance:null, text, ...who4(S.showName), createdAt:Date.now(), parentId:p.id });
+      S.replyDrafts[p.id] = ''; S.openReply = null; draw();
+    } catch(e){ handleWriteErr(e); }
+  }
+
+  async function removePost(p){
+    try {
+      await S.db.doc('posts/' + p.id).delete();
+      for (const r of S.posts.filter(r => r.parentId === p.id)) await S.db.doc('posts/' + r.id).delete();
+    } catch(e){ handleWriteErr(e); }
+  }
+
+  async function decide(){
+    const t = topic(), text = S.decisionDraft.trim();
+    if (!t || !text){ $('decisionText')?.focus(); return; }
+    try {
+      await S.db.doc('topics/' + t.id).update({ status:'decided', decision:text, decidedBy:S.me, decidedAt:Date.now() });
+      S.deciding = false; S.decisionDraft = '';
+    } catch(e){ handleWriteErr(e); }
+  }
+  async function reopen(){
+    const t = topic(); if (!t) return;
+    try { await S.db.doc('topics/' + t.id).update({ status:'open' }); } catch(e){ handleWriteErr(e); }
+  }
+  async function deleteTopic(t){
+    try {
+      for (const p of postsFor(t.id)) await S.db.doc('posts/' + p.id).delete();
+      await S.db.doc('topics/' + t.id).delete();
+      S.confirmDelete = null; S.selected = null;
+    } catch(e){ handleWriteErr(e); }
+  }
+
+  // ---------- UI wiring ----------
+  function openNew(){ if (!writable()) return; $('anonTopic').checked = S.showName || !S.anonKey; $('anonTopic').disabled = !S.anonKey; $('newTopicOverlay').hidden = false; $('ntQuestion').focus(); }
+  function closeNew(){ $('newTopicOverlay').hidden = true; $('ntErr').hidden = true; }
+  $('newTopicBtn').addEventListener('click', openNew);
+  $('emptyNewBtn').addEventListener('click', openNew);
+  $('ntCancel').addEventListener('click', closeNew);
+  $('ntCreate').addEventListener('click', createTopic);
+  $('newTopicOverlay').addEventListener('click', e => { if (e.target.id === 'newTopicOverlay') closeNew(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('newTopicOverlay').hidden) closeNew(); });
+  $('kindOpinion').addEventListener('click', () => { S.kind = 'opinion'; draw(); });
+  $('kindQuestion').addEventListener('click', () => { S.kind = 'question'; draw(); });
+  $('stanceChips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; S.stance = S.stance === b.dataset.s ? null : b.dataset.s; draw(); });
+  document.querySelector('.filters').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; if (b.dataset.f) S.filter = b.dataset.f; if (b.dataset.o) S.order = b.dataset.o; draw(); });
+  S.showName = store.get('maagal.showName') === '1';
+  $('anonPost').addEventListener('change', e => { S.showName = e.target.checked; store.set('maagal.showName', S.showName ? '1' : '0'); draw(); });
+  $('sendBtn').addEventListener('click', sendPost);
+  $('postText').value = store.get('maagal.draft') || '';
+  let dt; $('postText').addEventListener('input', e => { clearTimeout(dt); dt = setTimeout(() => store.set('maagal.draft', e.target.value), 400); });
+  $('postText').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendPost(); });
+
+  draw();
+  setInterval(() => { if (S.ready) draw(); }, 60000); // refresh relative times only
+
+  // ---------- boot ----------
+  (async function boot(){
+    const cl = window.claude;
+    if (!cl || !cl.use){ notice('כדי לראות ולהוסיף דיונים, פתחו את הדף ב-Claude כשאתם מחוברים.'); return; }
+    const [db, user] = await Promise.all([cl.use('db'), cl.use('user')]);
+    S.user = user;
+    if (user){
+      try { S.me = await user.id(); } catch(e){}
+      try { S.canWrite = await user.can('data.write'); } catch(e){}
+      try { S.canEdit = await user.canEdit(); } catch(e){}
+    }
+    if (!db){ notice('כדי לראות ולהוסיף דיונים צריך להיות מחוברים לחשבון.'); return; }
+    S.db = db;
+    if (S.me && S.canWrite !== false){
+      try {
+        const ref = db.doc('data/users/' + S.me + '/profile');
+        const snap = await ref.get();
+        let k = snap.exists && snap.data().anonKey;
+        if (!k){ k = 'a' + newId() + Math.random().toString(36).slice(2,10); await ref.set({ anonKey:k }); }
+        S.anonKey = k;
+      } catch(e){}
+    }
+    if (S.canWrite === false || !S.me) notice('אפשר לקרוא את הדיונים, אבל אין לך הרשאה לכתוב. בקשו מבעל הדף הרשאת משתתף.');
+    if (S.me && S.canWrite !== false){
+      try {
+        const vref = db.doc('visits/' + S.me), vs = await vref.get();
+        if (!vs.exists) await vref.set({ at: Date.now(), seen: {} });
+        else S.visits = { ...S.visits, [S.me]: vs.data() };
+        S.visitReady = true; markSeen(S.selected);
+      } catch(e){}
+    }
+    const wanted = store.get('maagal.sel');
+    db.collection('topics').orderBy('createdAt', 'desc').onSnapshot(snap => {
+      S.topics = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      if (!S.topics.find(t => t.id === S.selected)){
+        S.selected = (S.topics.find(t => t.id === wanted) || S.topics[0] || {}).id || null;
+      }
+      S.ready = true; render();
+    }, () => notice('החיבור לדיונים נותק. רעננו את הדף.'));
+    db.collection('visits').onSnapshot(snap => {
+      const v = {}; snap.docs.forEach(d => { v[d.id] = d.data() || {}; });
+      const mine = S.visits[S.me];
+      if (mine && !v[S.me]) v[S.me] = mine;
+      S.visits = v;
+      render();
+    }, () => {});
+    db.collection('votes').onSnapshot(snap => {
+      const v = {}; snap.docs.forEach(d => { v[d.id] = (d.data() || {}).scores || {}; });
+      S.votes = v; render();
+    }, () => {});
+    db.collection('posts').onSnapshot(snap => {
+      S.posts = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      render();
+    }, () => {});
+  })();
+})();
+</script>
+
+</body></html>
